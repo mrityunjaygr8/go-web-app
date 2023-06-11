@@ -1,0 +1,11 @@
+# Directory in which the generated static code is to be kept.
+output = "db/models" 
+
+# Each time new code is generated, completely wipe out the old one.
+wipe = true
+
+# The `go` package name used in the generated code.
+pkgname = "dbmodels"
+
+# Generates code for enum types as well.
+add-enum-types = true

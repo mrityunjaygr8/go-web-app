@@ -1,0 +1,48 @@
+version: '3'
+
+dotenv: [".env"]
+
+tasks:
+  postgres:
+    cmds:
+      - docker run --name postgres -p 5432:5432 -e POSTGRES_USER=$PSQL_USER -e POSTGRES_PASSWORD=$PSQL_PASS -d postgres:alpine
+
+  createdb:
+    cmds:
+      - docker exec -it postgres createdb --username=$PSQL_USER --owner=$PSQL_USER $PSQL_DBNAME
+
+  dropdb:
+    cmds:
+      - docker exec -it postgres dropdb --username=$PSQL_USER $PSQL_DBNAME
+
+  migrateup:
+    cmds:
+      - migrate -path db/migrations -database "postgresql://$PSQL_USER:$PSQL_PASS@$PSQL_HOST:$PSQL_PORT/$PSQL_DBNAME?sslmode=$PSQL_SSLMODE" -verbose up
+
+  migratedown:
+    cmds:
+      - migrate -path db/migrations -database "postgresql://$PSQL_USER:$PSQL_PASS@$PSQL_HOST:$PSQL_PORT/$PSQL_DBNAME?sslmode=$PSQL_SSLMODE" -verbose down
+
+  migrateup1:
+    cmds:
+      - migrate -path db/migrations -database "postgresql://$PSQL_USER:$PSQL_PASS@$PSQL_HOST:$PSQL_PORT/$PSQL_DBNAME?sslmode=$PSQL_SSLMODE" -verbose up 1
+
+  migratedown1:
+    cmds:
+      - migrate -path db/migrations -database "postgresql://$PSQL_USER:$PSQL_PASS@$PSQL_HOST:$PSQL_PORT/$PSQL_DBNAME?sslmode=$PSQL_SSLMODE" -verbose down 1
+
+  psql:
+    cmds:
+      - docker exec -it postgres psql -U $PSQL_USER $PSQL_DBNAME
+
+  api:
+    cmds:
+      - go run ./cmd/api
+
+  air:
+    cmds:
+      - air
+
+  sqlboiler:
+    cmds:
+      - sqlboiler --wipe psql
