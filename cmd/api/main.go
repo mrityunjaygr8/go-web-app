@@ -6,22 +6,23 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
-	"github.com/mrityunjaygr8/vlcm-go/server"
-	"github.com/sirupsen/logrus"
+	"github.com/mrityunjaygr8/go-oink/server"
+	"github.com/rs/zerolog"
 )
 
 func main() {
-	logger := &logrus.Logger{
-		Out:       os.Stdout,
-		Hooks:     make(logrus.LevelHooks),
-		Formatter: new(logrus.JSONFormatter),
-		Level:     logrus.DebugLevel,
-	}
-
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+	// logger.Logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	c, err := getConfig(logger)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal().Err(err)
 	}
+
+	if c.Env == envDevelopment {
+		logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+
+	logger.Info().Any("config", c).Msg("")
 
 	srvConf := server.ServerConf{
 		Addr: c.SrvAddr,
@@ -29,7 +30,7 @@ func main() {
 	}
 
 	if c.DbDsn == "" && c.DbHost == "" {
-		logger.WithFields(c.toFields()).Fatal("DB configuration not found. Either specify the DSN or the individual components.")
+		logger.Fatal().Any("config", c).Msg("DB configuration not found. Either specify the DSN or the individual components.")
 	}
 
 	if c.DbDsn == "" {
@@ -37,12 +38,14 @@ func main() {
 	}
 	db, err := sql.Open("postgres", c.DbDsn)
 	if err != nil {
-		logger.WithFields(c.toFields()).Fatal(err)
+		// logger.WithFields(c.toFields()).Fatal(err)
+		logger.Fatal().Any("config", c).Err(err)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		logger.WithFields(c.toFields()).Fatal(err)
+		// logger.WithFields(c.toFields()).Fatal(err)
+		logger.Fatal().Any("config", c).Err(err)
 	}
 
 	a := server.New(logger, db, srvConf)

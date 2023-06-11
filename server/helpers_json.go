@@ -14,7 +14,7 @@ func (app *Application) writeJSON(w http.ResponseWriter, status int, data envelo
 
 	js, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
-		app.logger.Errorln(err)
+		app.l.Error().Err(err)
 		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
 	}
 

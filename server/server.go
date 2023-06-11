@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/alexliesenfeld/health"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type Application struct {
 	db     *sql.DB
-	logger *logrus.Logger
+	l      zerolog.Logger
 	config ServerConf
 	wg     sync.WaitGroup
 	health health.Checker
@@ -29,9 +29,9 @@ type ServerConf struct {
 	Port int
 }
 
-func New(logger *logrus.Logger, db *sql.DB, srvConf ServerConf) *Application {
+func New(logger zerolog.Logger, db *sql.DB, srvConf ServerConf) *Application {
 	a := &Application{
-		logger: logger,
+		l:      logger,
 		db:     db,
 		config: srvConf,
 	}
@@ -75,7 +75,7 @@ func (a *Application) Serve() error {
 		// Set a status listener that will be invoked when the health status changes.
 		// More powerful hooks are also available (see docs).
 		health.WithStatusListener(func(ctx context.Context, state health.CheckerState) {
-			a.logger.Println(fmt.Sprintf("health status changed to %s", state.Status))
+			a.l.Info().Msg(fmt.Sprintf("health status changed to %s", state.Status))
 		}),
 	)
 	srv := &http.Server{
@@ -93,9 +93,7 @@ func (a *Application) Serve() error {
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 		s := <-quit
-		a.logger.Println("caught signal", map[string]string{
-			"signal": s.String(),
-		})
+		a.l.Info().Str("signal", s.String()).Msg("caught signal")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -106,19 +104,14 @@ func (a *Application) Serve() error {
 			shutdownError <- err
 		}
 
-		a.logger.Println("completing background tasks", map[string]string{
-			"addr": srv.Addr,
-		})
+		a.l.Info().Str("addr", srv.Addr).Msg("completing background tasks")
 
 		a.wg.Wait()
 		shutdownError <- nil
 
 	}()
 
-	a.logger.Println("starting server", map[string]string{
-		"addr": srv.Addr,
-		"env":  a.config.Addr,
-	})
+	a.l.Info().Str("addr", srv.Addr).Str("env", a.config.Addr).Msg("starting server")
 
 	err := srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
@@ -130,9 +123,7 @@ func (a *Application) Serve() error {
 		return err
 	}
 
-	a.logger.Println("stopped server", map[string]string{
-		"addr": srv.Addr,
-	})
+	a.l.Info().Str("addr", srv.Addr).Msg("stopped server")
 
 	return nil
 }

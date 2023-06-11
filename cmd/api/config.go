@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	// "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -9,6 +10,8 @@ import (
 // 	DB     server.DbConf
 // 	Server server.ServerConf
 // }
+
+const envDevelopment = "development"
 
 type config struct {
 	DbDsn   string `mapstructure:"PSQL_DSN" json:"PSQL_DSN"`
@@ -20,32 +23,34 @@ type config struct {
 	DbSSL   string `mapstructure:"PSQL_SSLMODE" json:"PSQL_SSLMODE"`
 	SrvAddr string `mapstructure:"SERVER_ADDR" json:"SERVER_ADDR"`
 	SrvPort int    `mapstructure:"SERVER_PORT" json:"SERVER_PORT"`
+	Env     string `mapstructure:"ENV" json:"ENV"`
 }
 
-func (c config) toFields() logrus.Fields {
-	fields := make(logrus.Fields)
+// func (c config) toFields() logrus.Fields {
+// 	fields := make(logrus.Fields)
+//
+// 	fields["DbDsn"] = c.DbDsn
+// 	fields["DbHost"] = c.DbHost
+// 	fields["DbPort"] = c.DbPort
+// 	fields["DbPass"] = c.DbPass
+// 	fields["DbUser"] = c.DbUser
+// 	fields["DbSSL"] = c.DbSSL
+// 	fields["DbName"] = c.DbName
+// 	fields["SrvAddr"] = c.SrvAddr
+// 	fields["SrvPort"] = c.SrvPort
+//
+// 	return fields
+// }
 
-	fields["DbDsn"] = c.DbDsn
-	fields["DbHost"] = c.DbHost
-	fields["DbPort"] = c.DbPort
-	fields["DbPass"] = c.DbPass
-	fields["DbUser"] = c.DbUser
-	fields["DbSSL"] = c.DbSSL
-	fields["DbName"] = c.DbName
-	fields["SrvAddr"] = c.SrvAddr
-	fields["SrvPort"] = c.SrvPort
-
-	return fields
-}
-
-func getConfig(logger *logrus.Logger) (config, error) {
+func getConfig(logger zerolog.Logger) (config, error) {
 	var c config
 
 	viper.SetConfigName(".env")
 	viper.SetConfigType("env")
 	// viper.AddConfigPath(".")
 
-	viper.SetEnvPrefix("vlcm")
+	viper.SetEnvPrefix("oink")
+	viper.SetDefault("ENV", envDevelopment)
 
 	viper.BindEnv("SERVER_ADDR", "SERVER_ADDR")
 	viper.BindEnv("SERVER_PORT", "SERVER_PORT")
@@ -56,6 +61,7 @@ func getConfig(logger *logrus.Logger) (config, error) {
 	viper.BindEnv("PSQL_USER", "PSQL_USER")
 	viper.BindEnv("PSQL_DSN", "PSQL_DSN")
 	viper.BindEnv("PSQL_SSLMODE", "PSQL_SSLMODE")
+	viper.BindEnv("ENV", "ENV")
 
 	err := viper.ReadInConfig()
 	if err != nil {
@@ -63,7 +69,7 @@ func getConfig(logger *logrus.Logger) (config, error) {
 		if !ok {
 			return config{}, err
 		} else {
-			logger.Errorln(err.Error())
+			logger.Error().Err(err)
 		}
 	}
 
